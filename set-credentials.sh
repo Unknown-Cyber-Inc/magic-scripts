@@ -1,7 +1,15 @@
 # ENVRIONMENT VARIABLES NEEDED FOR MAGIC API
+# CAUTION DO NOT PUSH THIS FILE TO GIT REPOSITORIES AFTER 
+#    POPULATING IT WITH CREDENTIALS
 
 export MAGIC_USER="<PUT YOUR EMAIL ID HERE>"
 export MAGIC_PASS="<PUT YOUR PASSWORD HERE>"
 
-export MAGIC_API="https://api.magic.unknownyber.com:443"
-export MAGIC_GROUP="setup group id if neede"
+# MAGIC GROUP ID is a hexadecimal ID, which may be found in the Group Settings
+export MAGIC_GROUP="setup group id if needed"
+
+export MAGIC_API="https://api.magic.cythereal.com:443"
+
+# JUCY API servers are private to an organization.
+export JUCY_ORG="gds"
+export JUCY_API="https://$JUCY_ORG.jucy.unknowncyber.com:443"
