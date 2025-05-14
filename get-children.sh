@@ -10,5 +10,5 @@
 #  OUTPUT: To standard output
 
 sha1=$1
-curl -H "Authorization: Bearer $MAGIC_TOKEN" -X GET "$MAGIC_API/v2/files/$sha1/children?no_links=true"
+curl -H "Authorization: Bearer $MAGIC_ACCESS_TOKEN" -X GET "$MAGIC_API/v2/files/$sha1/children?no_links=true"
 

@@ -49,4 +49,4 @@ no_links=true               # true: do not give links to related objects
 
 expand_mask=$x
 
-curl -H "Authorization: Bearer $MAGIC_TOKEN" -X GET "$MAGIC_API/v2/files/$sha1?$read_mask&expand_mask=notes&explain=$explain&no_links=$no_links"
+curl -H "Authorization: Bearer $MAGIC_ACCESS_TOKEN" -X GET "$MAGIC_API/v2/files/$sha1?$read_mask&expand_mask=notes&explain=$explain&no_links=$no_links"
