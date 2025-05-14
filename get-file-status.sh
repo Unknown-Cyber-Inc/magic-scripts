@@ -9,4 +9,4 @@
 
 sha1=$1
 
-curl -H "Authorization: Bearer $MAGIC_TOKEN" -X GET "$MAGIC_API/v2/files/$sha1?read_mask=_default,pipeline&no_links=true"
+curl -H "Authorization: Bearer $MAGIC_ACCESS_TOKEN" -X GET "$MAGIC_API/v2/files/$sha1?read_mask=_default,pipeline&no_links=true"
