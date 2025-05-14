@@ -1,11 +1,7 @@
 
 These scripts accompany the Phase 1 training.
 
-
-
 SETTING UP YOUR ENVIRONMENT
-
-    Pre-requisite: Requires "python" in $PATH
 
     Step 1: Modify "set-credentials.sh"
     Step 2: Initialize environment variables with the credentials
@@ -17,31 +13,33 @@ SETTING UP YOUR ENVIRONMENT
 	   % printenv | grep MAGIC
 
 	 Should have the following variable set:
-	    MAGIC_USER
-	    MAGIC_PASS
+        MAGIC_API = URL of the MAGIC API SERVER
+        JUCY_API  = URL of the JUCY SERVER
 
-	    MAGIC_GROUP
+	    MAGIC_USER = Email address of user account
+	    MAGIC_PASS = Account password
 
-	    MAGIC_API
+	    MAGIC_GROUP = Hexadecimal group ID (optional)
 
     Step 3: Login to your user account
 
-	   % source user-login.sh
+	   % source jwt-user-login.sh
 
 
 	  Confirm that the following environment variables are set
 
-	  % printenv | grep MAGIC_USER_TOKEN
+	  % printenv | grep MAGIC_USER_ACCESS_TOKEN
+      % printenv | grep MAGIC_ACCESS_TOKEN
 
 
     Step 4: (optional) Login to the your preferred group
 
-	  % source group-login.sh
+	  % source jwt-group-login.sh
 
 	  Confirm that the following environment variables are set
 
-	  % printenv | grep MAGIC_GROUP_TOKEN
-	  % printenv | grep MAGIC_TOKEN
+	  % printenv | grep MAGIC_GROUP_ACCESS_TOKEN
+	  % printenv | grep MAGIC_ACCESS_TOKEN
 
 
 PERFORMING OPERATIONS

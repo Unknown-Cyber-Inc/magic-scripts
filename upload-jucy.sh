@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 # TO UPLOAD A FILE
 
@@ -6,8 +6,7 @@
 
 
 # PARAMETERS: USER DEFINE DATA
-TAGS="AL 05072025"    # A tag to assocated with the file
-NOTES="This is a test of uploading using scripts"
+TAGS="AL-05072025-Jucy2"    # A tag to assocated with the file
 PASSWORD=         # For password protected files; if not default
 
 # PARAMETER: DISABLE UNPACKING OF BY MAGIC
@@ -29,13 +28,23 @@ recursive=true         # make it false to extract only one level deep files
 retain_wrapper=true    # make it false if you do not want to keep the wrapper
                        # in your collection (it is always kept in the system)
 
+# file:                # (binary itself)
+# priority: 1 (can be 1, 2, or 3)
+# machine: win10 (can be win7, win10, or win11)
+# route: internet
+# tlp: white
+# timeout: 120
 
-query_params="skip_unpack=$skip_unpack&extract=$extract&recursive=$recursive&retain_wrapper=$retain_wrapper&no_links=true"
+query_params=""
+# query_params="$query_params&filename=$1"
 
 curl -H "Authorization: Bearer $MAGIC_ACCESS_TOKEN" \
-    -F "filename=$1" \
-    -F "filedata=@$1" \
-    -F "tags=$TAGS" \
-    -F "notes=$NOTES" \
+    -F "file=@$1" \
+    -F "tags_tasks=$TAGS" \
     -F "password=$PASSWORD" \
-    -X POST "$MAGIC_API/v2/files?$query_params"
+    -F "priority=1" \
+    -F "tlp=white" \
+    -F "timeout=120 " \
+    -F "route=internet" \
+    -F "machine=win10" \
+    -X POST "$JUCY_API/apiv2/tasks/create/file/"
