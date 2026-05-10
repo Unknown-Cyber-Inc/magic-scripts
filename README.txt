@@ -20,6 +20,10 @@ SETTING UP YOUR ENVIRONMENT
 	    MAGIC_PASS = Account password
 
 	    MAGIC_GROUP = Hexadecimal group ID (optional)
+       
+         Set the following to download files from HA
+	  
+	    HA_API_KEY = Hybrid Analysis API Key
 
     Step 3: Login to your user account
 

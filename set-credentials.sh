@@ -13,3 +13,6 @@ export MAGIC_API="https://api.unknowncyber.com:443"
 # JUCY API servers are private to an organization.
 export JUCY_ORG="jucy"
 export JUCY_API="https://$JUCY_ORG.unknowncyber.com:443"
+
+export HA_API_KEY="Hybrid Analysis API Key"
+
