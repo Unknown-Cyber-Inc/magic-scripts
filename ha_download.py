@@ -123,6 +123,7 @@ def download_sample(
     key: str,
     outdir: Path,
     password: str | None = None,
+    skip_download: bool = False,
 ) -> bool:
     map_path = outdir / "sha256-map.csv"
     sha256_map = load_sha256_map(map_path)
@@ -147,6 +148,9 @@ def download_sample(
         log.info("Already have %s – skipping", sha256)
         return True
 
+    if skip_download:
+        log.info("Downloading %s …", sha256)
+        return True
     log.info("Downloading %s …", sha256)
     try:
         data = fetch_file(sha256, key)
@@ -193,6 +197,11 @@ def main():
         help="Output directory (default: ./malware)",
     )
     parser.add_argument(
+        "-s", "--skip-download", default=False,
+        action="store_true",
+        help="Do not download file, just update sha256 hashmap",
+    )
+    parser.add_argument(
         "-k", "--key", default=os.environ.get("HA_API_KEY"),
         help="HA API key (default: $HA_API_KEY env var)",
     )
@@ -211,10 +220,13 @@ def main():
         log.error("API key required – pass -k KEY or set HA_API_KEY")
         sys.exit(1)
 
+    if args.skip_download:
+        log.warn("Skipping downloading of files; will only update sha256 map")
+
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
-    ok = download_sample(args.hash, args.key, outdir, args.password)
+    ok = download_sample(args.hash, args.key, outdir, args.password, args.skip_download)
     sys.exit(0 if ok else 1)
 
 
