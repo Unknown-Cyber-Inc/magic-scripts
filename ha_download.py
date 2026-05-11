@@ -111,6 +111,32 @@ def append_sha256_map(map_path: Path, input_hash: str, sha256: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Misses log – hashes HA couldn't resolve or files HA didn't have
+#   columns: hash, sha256, reason
+#   reason: no_sha256_mapping | file_not_found
+# ---------------------------------------------------------------------------
+
+MISS_NO_SHA256 = "no_sha256_mapping"
+MISS_NOT_FOUND = "file_not_found"
+
+
+def load_misses(miss_path: Path) -> dict[str, str]:
+    """Return {lowercase_hash: reason} for every recorded miss."""
+    misses: dict[str, str] = {}
+    if miss_path.exists():
+        with open(miss_path, newline="") as f:
+            for row in csv.reader(f):
+                if len(row) >= 3:
+                    misses[row[0].strip().lower()] = row[2].strip()
+    return misses
+
+
+def append_miss(miss_path: Path, input_hash: str, sha256: str, reason: str) -> None:
+    with open(miss_path, "a", newline="") as f:
+        csv.writer(f).writerow([input_hash, sha256, reason])
+
+
+# ---------------------------------------------------------------------------
 # Download logic
 # ---------------------------------------------------------------------------
 
@@ -124,10 +150,18 @@ def download_sample(
     outdir: Path,
     password: str | None = None,
     skip_download: bool = False,
+    *,
+    map_path: Path,
+    miss_path: Path,
+    sha256_map: dict[str, str],
+    misses: dict[str, str],
 ) -> bool:
-    map_path = outdir / "sha256-map.csv"
-    sha256_map = load_sha256_map(map_path)
+    """Download a single sample.  Mutates sha256_map/misses in-place."""
     input_lower = hash_val.lower()
+
+    if input_lower in misses:
+        log.info("Previously missed %s (%s) – skipping", hash_val, misses[input_lower])
+        return False
 
     if is_sha256(hash_val):
         sha256 = input_lower
@@ -139,24 +173,35 @@ def download_sample(
         sha256 = fetch_sha256(hash_val, key)
         if sha256 is None:
             log.error("HA has no record for %s", hash_val)
+            append_miss(miss_path, input_lower, "", MISS_NO_SHA256)
+            misses[input_lower] = MISS_NO_SHA256
             return False
         sha256 = sha256.lower()
         append_sha256_map(map_path, input_lower, sha256)
+        sha256_map[input_lower] = sha256
         log.info("Resolved %s -> %s", hash_val, sha256)
+
+    if sha256 in misses:
+        log.info("Previously missed %s (%s) – skipping", sha256, misses[sha256])
+        return False
 
     if already_downloaded(outdir, sha256):
         log.info("Already have %s – skipping", sha256)
         return True
 
     if skip_download:
-        log.info("Downloading %s …", sha256)
+        log.info("Resolved sha256 %s – skipping download", sha256)
         return True
+
     log.info("Downloading %s …", sha256)
     try:
         data = fetch_file(sha256, key)
     except requests.HTTPError as exc:
         if exc.response is not None and exc.response.status_code == 404:
             log.error("File not available on HA for %s", sha256)
+            append_miss(miss_path, input_lower, sha256, MISS_NOT_FOUND)
+            misses[input_lower] = MISS_NOT_FOUND
+            misses[sha256] = MISS_NOT_FOUND
             return False
         raise
 
@@ -183,15 +228,59 @@ def download_sample(
     return True
 
 
+def process_hashes(
+    hashes: list[str],
+    key: str,
+    outdir: Path,
+    password: str | None = None,
+    skip_download: bool = False,
+) -> int:
+    """Process a list of hashes. Returns count of failures."""
+    map_path = outdir / "sha256-map.csv"
+    miss_path = outdir / "ha-misses.csv"
+    sha256_map = load_sha256_map(map_path)
+    misses = load_misses(miss_path)
+
+    failures = 0
+    for i, h in enumerate(hashes, 1):
+        log.info("[%d/%d] %s", i, len(hashes), h)
+        ok = download_sample(
+            h, key, outdir, password, skip_download,
+            map_path=map_path, miss_path=miss_path,
+            sha256_map=sha256_map, misses=misses,
+        )
+        if not ok:
+            failures += 1
+    return failures
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
+def read_hash_file(path: str) -> list[str]:
+    """Read one hash per line, stripping blanks and # comments."""
+    hashes: list[str] = []
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                hashes.append(line.split()[0])
+    return hashes
+
 
 def main():
     parser = argparse.ArgumentParser(
         description="Download malware samples from Hybrid Analysis",
     )
-    parser.add_argument("hash", help="File hash (MD5, SHA1, or SHA256)")
+    parser.add_argument(
+        "hash", nargs="?", default=None,
+        help="Single file hash (MD5, SHA1, or SHA256)",
+    )
+    parser.add_argument(
+        "-f", "--file",
+        help="File containing one hash per line",
+    )
     parser.add_argument(
         "-o", "--outdir", default="./malware",
         help="Output directory (default: ./malware)",
@@ -209,25 +298,43 @@ def main():
         "-p", "--password",
         help="Save sample inside an AES-encrypted zip with this password",
     )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true",
+        help="Verbose output (INFO level); default is WARNING and above",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.INFO if args.verbose else logging.WARNING,
         format="%(levelname)s: %(message)s",
     )
 
+    if not args.hash and not args.file:
+        parser.error("provide a hash or -f FILE")
     if not args.key:
         log.error("API key required – pass -k KEY or set HA_API_KEY")
         sys.exit(1)
 
-    if args.skip_download:
-        log.warn("Skipping downloading of files; will only update sha256 map")
-
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
-    ok = download_sample(args.hash, args.key, outdir, args.password, args.skip_download)
-    sys.exit(0 if ok else 1)
+    hashes: list[str] = []
+    if args.file:
+        hashes.extend(read_hash_file(args.file))
+    if args.hash:
+        hashes.append(args.hash)
+
+    if not hashes:
+        log.error("No hashes to process")
+        sys.exit(1)
+
+    if args.skip_download:
+        log.warning("Skipping file downloads; will only update sha256 map")
+
+    failures = process_hashes(hashes, args.key, outdir, args.password, args.skip_download)
+    if failures:
+        log.warning("%d of %d hashes failed", failures, len(hashes))
+    sys.exit(1 if failures == len(hashes) else 0)
 
 
 if __name__ == "__main__":
