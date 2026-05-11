@@ -160,14 +160,14 @@ def download_sample(
     input_lower = hash_val.lower()
 
     if input_lower in misses:
-        log.info("Previously missed %s (%s) – skipping", hash_val, misses[input_lower])
+        log.debug("Previously missed %s (%s) – skipping", hash_val, misses[input_lower])
         return False
 
     if is_sha256(hash_val):
         sha256 = input_lower
     elif input_lower in sha256_map:
         sha256 = sha256_map[input_lower]
-        log.info("Resolved %s -> %s (cached)", hash_val, sha256)
+        log.debug("Resolved %s -> %s (cached)", hash_val, sha256)
     else:
         log.info("Looking up sha256 for %s …", hash_val)
         sha256 = fetch_sha256(hash_val, key)
@@ -182,15 +182,15 @@ def download_sample(
         log.info("Resolved %s -> %s", hash_val, sha256)
 
     if sha256 in misses:
-        log.info("Previously missed %s (%s) – skipping", sha256, misses[sha256])
+        log.debug("Previously missed %s (%s) – skipping", sha256, misses[sha256])
         return False
 
     if already_downloaded(outdir, sha256):
-        log.info("Already have %s – skipping", sha256)
+        log.debug("Already have %s – skipping", sha256)
         return True
 
     if skip_download:
-        log.info("Resolved sha256 %s – skipping download", sha256)
+        log.debug("Resolved sha256 %s – skipping download", sha256)
         return True
 
     log.info("Downloading %s …", sha256)
@@ -219,11 +219,11 @@ def download_sample(
         ) as zf:
             zf.setpassword(password.encode())
             zf.writestr(f"{sha256}-sample-bin", data.read())
-        log.info("Saved %s", dest)
+        log.debug("Saved %s", dest)
     else:
         dest = outdir / f"{sha256}-sample-bin"
         dest.write_bytes(data.read())
-        log.info("Saved %s", dest)
+        log.debug("Saved %s", dest)
 
     return True
 
@@ -243,7 +243,7 @@ def process_hashes(
 
     failures = 0
     for i, h in enumerate(hashes, 1):
-        log.info("[%d/%d] %s", i, len(hashes), h)
+        log.debug("[%d/%d] %s", i, len(hashes), h)
         ok = download_sample(
             h, key, outdir, password, skip_download,
             map_path=map_path, miss_path=miss_path,
@@ -300,12 +300,12 @@ def main():
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true",
-        help="Verbose output (INFO level); default is WARNING and above",
+        help="Verbose output (DEBUG level); default is INFO and above",
     )
     args = parser.parse_args()
 
     logging.basicConfig(
-        level=logging.INFO if args.verbose else logging.WARNING,
+        level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(levelname)s: %(message)s",
     )
 
